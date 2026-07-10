@@ -30,7 +30,10 @@ COPY package*.json ./
 # variable, so docker-compose.yml's `NODE_ENV=${NODE_ENV:-production}` leaks NODE_ENV=production
 # into this stage and a bare `npm ci` would skip @nestjs/cli → `sh: 1: nest: not found` (exit 127).
 # (docker-compose.dev.yml hardcodes NODE_ENV=development, which is why the dev build never hit this.)
-RUN npm ci --include=dev
+# --legacy-peer-deps: typeorm@0.3.x declares peerOptional sqlite3@^5, but we run
+# sqlite3@6 (security bump; runtime API compatible, prod uses postgres). Lockfile
+# was generated the same way, so npm ci stays reproducible.
+RUN npm ci --include=dev --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -84,7 +87,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install production dependencies only
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --legacy-peer-deps && npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
