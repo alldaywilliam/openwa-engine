@@ -78,7 +78,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.3",
-    "sqlite3": "^6.0.1",
+    "sqlite3": "^5.1.7",
     "tar-stream": "^3.2.0",
     "typeorm": "^0.3.29",
     "undici": "^8.5.0",
@@ -172,6 +172,10 @@
   "overrides": {
     "multer": "^2.2.0",
     "form-data": "^4.0.6",
-    "fast-uri": "^3.1.2"
+    "fast-uri": "^3.1.2",
+    "tar": "^7.5.19",
+    "cacache": "^21.0.1",
+    "make-fetch-happen": "^16.0.1",
+    "node-gyp": "^13.0.1"
   }
 }
