@@ -6,6 +6,7 @@ import {
   withInboundDownloadTimeout,
   coerceDeclaredSize,
   isMediaDownloadEnabled,
+  stripMediaForStorage,
 } from './inbound-media-cap';
 
 describe('inbound media cap', () => {
@@ -203,6 +204,43 @@ describe('inbound media cap', () => {
       const res = capInboundMedia({ mimetype: 'image/jpeg', sizeBytes: 5000, toBase64: () => 'D', maxBytes: 5000 });
       expect(res.data).toBe('D');
       expect(res.omitted).toBeUndefined();
+    });
+  });
+
+  describe('stripMediaForStorage', () => {
+    // The whole point: the base64 must never reach a row again. It was 99,998% of the
+    // messages table (289 MB over 5.107 rows) and filled the volume on 2026-08-07.
+    it('drops the blob and keeps the envelope', () => {
+      const res = stripMediaForStorage({ mimetype: 'image/png', filename: 'foto.png', data: 'AAAA' });
+      expect(res.data).toBeUndefined();
+      expect(res.mimetype).toBe('image/png');
+      expect(res.filename).toBe('foto.png');
+      expect(res.omitted).toBe(true);
+    });
+
+    it('does not mutate the caller — the live webhook payload keeps its base64', () => {
+      // The persisted object and the dispatched event were the SAME reference. Stripping in
+      // place would have silently removed media from every webhook consumer downstream.
+      const live = { mimetype: 'image/png', data: 'AAAA' };
+      const stored = stripMediaForStorage(live);
+      expect(live.data).toBe('AAAA');
+      expect(stored).not.toBe(live);
+    });
+
+    it('records the size so the chat view can still say how big it was', () => {
+      // 4 base64 chars = 3 bytes.
+      expect(stripMediaForStorage({ mimetype: 'video/mp4', data: 'AAAA' }).sizeBytes).toBe(3);
+    });
+
+    it('keeps a size that was already known, instead of re-deriving it', () => {
+      // Media the cap already omitted arrives with sizeBytes and no data.
+      const res = stripMediaForStorage({ mimetype: 'video/mp4', omitted: true, sizeBytes: 99_999 });
+      expect(res.sizeBytes).toBe(99_999);
+      expect(res.data).toBeUndefined();
+    });
+
+    it('omits sizeBytes rather than inventing a zero when nothing is known', () => {
+      expect(stripMediaForStorage({ mimetype: 'image/png' }).sizeBytes).toBeUndefined();
     });
   });
 });

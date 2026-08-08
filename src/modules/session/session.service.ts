@@ -28,6 +28,7 @@ import {
   IncomingMessage,
   ReactionEvent,
 } from '../../engine/interfaces/whatsapp-engine.interface';
+import { stripMediaForStorage } from '../../engine/adapters/inbound-media-cap';
 import { createLogger } from '../../common/services/logger.service';
 import { EventsGateway } from '../events/events.gateway';
 import { WebhookService } from '../webhook/webhook.service';
@@ -497,7 +498,9 @@ export class SessionService implements OnModuleDestroy, OnModuleInit, OnApplicat
         .map(x => {
           const m = byId.get(x)!;
           const metadata: Record<string, unknown> = {};
-          if (m.media) metadata.media = m.media;
+          // Envelope only — history is the WORST offender: one sync of an existing account
+          // backfills months of someone's photo album into our table in a single pass.
+          if (m.media) metadata.media = stripMediaForStorage(m.media);
           if (m.quotedMessage) metadata.quotedMessage = m.quotedMessage;
           if (m.call) metadata.call = m.call;
           const row = this.messageRepository.create({
@@ -682,7 +685,9 @@ export class SessionService implements OnModuleDestroy, OnModuleInit, OnApplicat
 
             const metadata: Record<string, unknown> = {};
             if (incoming.media) {
-              metadata.media = incoming.media;
+              // Envelope only. The dispatch below sends `finalMessage`, which still carries the
+              // base64 — this strips the DB copy, not the event. See stripMediaForStorage.
+              metadata.media = stripMediaForStorage(incoming.media);
             }
             if (incoming.quotedMessage) {
               metadata.quotedMessage = incoming.quotedMessage;

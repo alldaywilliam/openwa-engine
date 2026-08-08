@@ -112,3 +112,31 @@ export function capInboundMedia(args: {
   }
   return { mimetype: args.mimetype, filename: args.filename, data: args.toBase64() };
 }
+
+/**
+ * The DB copy of an inbound media message: envelope kept, blob dropped.
+ *
+ * `capInboundMedia` above only drops the blob ABOVE the 50 MiB cap, so everything under it was being
+ * written to `messages.metadata` as base64 and kept forever. Measured 2026-08-08 on the live database:
+ * 5.107 rows totalling 289 MB, of which 117 videos were 177 MB and 1.129 images were 81 MB — while the
+ * 3.247 text messages came to 4,8 KB in total. The blob was 99,998% of the table and it is the only
+ * part that grows with the customer base rather than with usage: every photo anyone sends to a linked
+ * WhatsApp was being copied into Postgres. That is what filled the volume on 2026-08-07 and took down
+ * login, the AI and the schedulers with it.
+ *
+ * Nothing read it back. The webhook and the WebSocket both dispatch the LIVE message object, not the
+ * persisted row, so consumers still receive the base64 exactly as before; and a client that wants the
+ * bytes of an old message has `GET /:chatId/history?includeMedia=true`, which re-downloads from
+ * WhatsApp on demand. What the row keeps — mimetype, filename, size, and `omitted` — is what the chat
+ * view needs to say "cliente enviou uma foto" and to render the right placeholder.
+ *
+ * Returns a NEW object: the caller's `media` is the same reference the webhook is about to dispatch,
+ * so mutating it in place would strip the payload from the live event too.
+ */
+export function stripMediaForStorage(media: InboundMedia): InboundMedia {
+  const sizeBytes = media.sizeBytes ?? (media.data ? Math.floor((media.data.length * 3) / 4) : undefined);
+  const stored: InboundMedia = { mimetype: media.mimetype, omitted: true };
+  if (media.filename !== undefined) stored.filename = media.filename;
+  if (sizeBytes !== undefined) stored.sizeBytes = sizeBytes;
+  return stored;
+}
