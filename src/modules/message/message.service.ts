@@ -14,6 +14,7 @@ import { createLogger } from '../../common/services/logger.service';
 import { SsrfBlockedError } from '../../common/security/ssrf-guard';
 import { userPart } from '../../engine/identity/wa-id';
 import { LidMappingStoreService } from '../../engine/identity/lid-mapping-store.service';
+import { bodyForStorage, stripMetadataForStorage } from '../../common/privacy/content-free-storage';
 
 export interface GetMessagesOptions {
   chatId?: string;
@@ -437,18 +438,22 @@ export class MessageService {
     },
   ): Promise<Message> {
     const session = await this.sessionService.findOne(sessionId);
+    // The single funnel for every outgoing send (text, media, reply, forward…), and therefore the one
+    // place the outgoing half of the no-content rule has to hold. `data.body` still carries the real
+    // text into this method — the SEND uses the DTO directly and never reads the row back — so
+    // dropping it here costs delivery nothing. See common/privacy/content-free-storage.ts.
     const message = this.messageRepository.create({
       sessionId,
       waMessageId: data.waMessageId,
       chatId: data.chatId,
       from: session?.phone || 'me',
       to: data.chatId,
-      body: data.body,
+      body: bodyForStorage(),
       type: data.type,
       direction: MessageDirection.OUTGOING,
       timestamp: data.timestamp,
       status: data.status ?? MessageStatus.PENDING,
-      metadata: data.metadata,
+      metadata: stripMetadataForStorage(data.metadata),
     });
     return this.messageRepository.save(message);
   }

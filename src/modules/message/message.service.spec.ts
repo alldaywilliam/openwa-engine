@@ -143,18 +143,36 @@ describe('MessageService', () => {
         text: 'Hello',
       });
 
-      // First save: pending message before engine send
+      // First save: pending message before engine send. The row records that a message happened and
+      // for whom — never what it said (common/privacy/content-free-storage.ts).
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           sessionId: 'sess-1',
           direction: MessageDirection.OUTGOING,
           type: 'text',
-          body: 'Hello',
+          body: undefined,
           status: MessageStatus.PENDING,
         }),
       );
       // save called twice: once for initial pending, once for status update to sent
       expect(repository.save).toHaveBeenCalledTimes(2);
+    });
+
+    it('never persists the text it just sent', async () => {
+      const input = { chatId: '628123456789@c.us', text: 'posso remarcar?' };
+      (hookManager.execute as jest.Mock).mockResolvedValueOnce({
+        continue: true,
+        data: { sessionId: 'sess-1', input, type: 'text' },
+      });
+
+      await service.sendText('sess-1', input);
+
+      // The DTO carries the real text all the way to the engine — only our copy is dropped.
+      expect(mockEngine.sendTextMessage).toHaveBeenCalledWith('628123456789@c.us', 'posso remarcar?');
+
+      const created = (repository.create as jest.Mock).mock.calls.at(-1)![0] as Record<string, unknown>;
+      expect(created.body).toBeUndefined();
+      expect(JSON.stringify(created)).not.toContain('remarcar');
     });
 
     it('returns success (not FAILED) when persisting the SENT state fails after a successful send', async () => {
@@ -357,7 +375,7 @@ describe('MessageService', () => {
       }
     });
 
-    it('strips the base64 payload from a FAILED media row but keeps mimetype/filename', async () => {
+    it('strips the base64 payload AND the filename from a FAILED media row, keeping the envelope', async () => {
       mockEngine.sendImageMessage.mockRejectedValueOnce(new Error('engine down'));
 
       await expect(
@@ -369,15 +387,17 @@ describe('MessageService', () => {
         }),
       ).rejects.toThrow();
 
-      // The persisted FAILED row must not retain the (often multi-MB) base64 — it's never displayed
-      // or retried — but should keep the descriptive mimetype/filename.
+      // The persisted FAILED row keeps only the envelope — what kind of file and how big — which is
+      // all a screen needs to say "enviou uma foto". The base64 is never displayed or retried, and
+      // the filename is text the sender chose (it routinely carries a person's name).
       const calls = (repository.save as jest.Mock).mock.calls as [Message][];
       const saved = calls.at(-1)![0];
       expect(saved.status).toBe(MessageStatus.FAILED);
       const media = (saved.metadata as { media?: { data?: unknown; mimetype?: string; filename?: string } }).media;
       expect(media?.data).toBeUndefined();
       expect(media?.mimetype).toBe('image/png');
-      expect(media?.filename).toBe('pic.png');
+      expect(media?.filename).toBeUndefined();
+      expect(JSON.stringify(saved.metadata)).not.toContain('pic.png');
     });
   });
 
@@ -661,10 +681,12 @@ describe('MessageService', () => {
         messageId: 'wa-msg-to-fwd',
       });
 
+      // `type: 'forward'` is what makes the row legible; the '[Forwarded]' placeholder body is not
+      // stored, for the same reason no other body is.
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           chatId: 'to@c.us',
-          body: '[Forwarded]',
+          body: undefined,
           type: 'forward',
         }),
       );

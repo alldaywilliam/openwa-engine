@@ -29,6 +29,7 @@ import {
   ReactionEvent,
 } from '../../engine/interfaces/whatsapp-engine.interface';
 import { stripMediaForStorage } from '../../engine/adapters/inbound-media-cap';
+import { bodyForStorage, stripMetadataForStorage } from '../../common/privacy/content-free-storage';
 import { createLogger } from '../../common/services/logger.service';
 import { EventsGateway } from '../events/events.gateway';
 import { WebhookService } from '../webhook/webhook.service';
@@ -509,12 +510,14 @@ export class SessionService implements OnModuleDestroy, OnModuleInit, OnApplicat
             chatId: m.chatId,
             from: m.from,
             to: m.to,
-            body: m.body,
+            // History is the worst offender for content too, not just for blobs: one sync of an
+            // existing account backfills MONTHS of someone's conversation in a single pass.
+            body: bodyForStorage(),
             type: m.type,
             direction: m.fromMe ? MessageDirection.OUTGOING : MessageDirection.INCOMING,
             timestamp: m.timestamp,
             status: MessageStatus.SENT,
-            metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+            metadata: stripMetadataForStorage(metadata),
           });
           // The chat panel orders by createdAt; stamp the real time so history sorts correctly.
           if (m.timestamp) {
@@ -705,12 +708,15 @@ export class SessionService implements OnModuleDestroy, OnModuleInit, OnApplicat
               chatName,
               from: incoming.from,
               to: incoming.to,
-              body: incoming.body,
+              // The row records that a message happened; `incoming` — which still carries the text
+              // and the media — is what gets dispatched to the webhook and the WebSocket below, so
+              // consumers see exactly what they saw before. Only our copy is dropped.
+              body: bodyForStorage(),
               type: incoming.type,
               direction: incoming.fromMe ? MessageDirection.OUTGOING : MessageDirection.INCOMING,
               timestamp: incoming.timestamp,
               status: MessageStatus.SENT,
-              metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+              metadata: stripMetadataForStorage(metadata),
             });
 
             // The hook chain above is async; a delete()/teardown can retire this engine while it
