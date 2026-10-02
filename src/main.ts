@@ -2,6 +2,8 @@
 // before any other module is evaluated, so modules that read process.env at import time (e.g. the
 // webhook Worker's @Processor connection) see the configured values rather than pre-dotenv defaults.
 import './config/load-env';
+// Antes do Baileys: o libsignal imprime chaves privadas nos logs.
+import './config/redact-signal-logs';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
