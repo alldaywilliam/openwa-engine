@@ -561,6 +561,17 @@ describe('BaileysAdapter messaging', () => {
     expect(res).toEqual({ id: 'OUT1', timestamp: 1700000001 });
   });
 
+  it('answers a decryption retry with the message it just sent (no "waiting for this message")', async () => {
+    const makeWASocket = jest.requireMock('@whiskeysockets/baileys').default as jest.Mock;
+    const proto = { conversation: 'hello' };
+    fakeSock.sendMessage.mockResolvedValue({ key: { id: 'OUT9' }, message: proto, messageTimestamp: 1 });
+    const adapter = await readyAdapter();
+    await adapter.sendTextMessage('628111@s.whatsapp.net', 'hello');
+    const cfg = makeWASocket.mock.calls[makeWASocket.mock.calls.length - 1][0];
+    await expect(cfg.getMessage({ id: 'OUT9' })).resolves.toBe(proto);
+    await expect(cfg.getMessage({ id: 'NOPE' })).resolves.toBeUndefined();
+  });
+
   it('sendTextMessage honors the chat disappearing timer when one is cached (#473)', async () => {
     fakeSock.sendMessage.mockResolvedValue({ key: { id: 'OUT1' }, messageTimestamp: 1700000001 });
     const adapter = await readyAdapter();

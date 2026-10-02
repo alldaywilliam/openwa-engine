@@ -115,6 +115,36 @@ function createBaileysLogger(): BaileysLogger {
 }
 
 export class BaileysAdapter implements IWhatsAppEngine {
+  // Retry de decriptacao: quando o celular de quem recebe nao consegue abrir
+  // a mensagem (sessao Signal trocada num reconnect), ele pede de novo e o
+  // Baileys chama getMessage para reenviar. Sem resposta, a mensagem fica
+  // para sempre em "Aguardando mensagem" (2026-10-02). O conteudo fica SO
+  // na memoria e so por 24 h: o banco continua sem texto (ver 48dc58c).
+  private readonly sentForRetry = new Map<string, { message: unknown; at: number }>();
+  private static readonly RETRY_TTL_MS = 24 * 60 * 60 * 1000;
+  private static readonly RETRY_MAX = 5000;
+
+  private rememberForRetry(sent: { key?: { id?: string | null }; message?: unknown } | undefined): void {
+    const id = sent?.key?.id;
+    if (!id || !sent?.message) return;
+    this.sentForRetry.set(id, { message: sent.message, at: Date.now() });
+    if (this.sentForRetry.size > BaileysAdapter.RETRY_MAX) {
+      const oldest = this.sentForRetry.keys().next().value;
+      if (oldest) this.sentForRetry.delete(oldest);
+    }
+  }
+
+  private messageForRetry(id: string | null | undefined): unknown {
+    if (!id) return undefined;
+    const hit = this.sentForRetry.get(id);
+    if (!hit) return undefined;
+    if (Date.now() - hit.at > BaileysAdapter.RETRY_TTL_MS) {
+      this.sentForRetry.delete(id);
+      return undefined;
+    }
+    return hit.message;
+  }
+
   private static readonly MAX_RECONNECT_ATTEMPTS = 5;
 
   private readonly logger = createLogger('BaileysAdapter');
@@ -234,6 +264,8 @@ export class BaileysAdapter implements IWhatsAppEngine {
       // the type through a deep import path that TypeScript does not auto-unify here.
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
       logger: createBaileysLogger() as unknown as ILogger,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/require-await
+      getMessage: (async (key: { id?: string | null }) => this.messageForRetry(key.id)) as any,
     });
     this.sock = sock;
 
@@ -481,6 +513,7 @@ export class BaileysAdapter implements IWhatsAppEngine {
       ? await this.sock!.sendMessage(chatId, content, options)
       : await this.sock!.sendMessage(chatId, content);
     if (sent) {
+      this.rememberForRetry(sent);
       void this.config.messageStore?.put(this.config.sessionId, sent).catch(err =>
         this.logger.warn('Failed to persist sent message to store', {
           error: err instanceof Error ? err.message : String(err),
@@ -1394,6 +1427,7 @@ export class BaileysAdapter implements IWhatsAppEngine {
       ? await this.sock!.sendMessage(chatId, content, merged)
       : await this.sock!.sendMessage(chatId, content);
     if (sent) {
+      this.rememberForRetry(sent);
       void this.config.messageStore?.put(this.config.sessionId, sent).catch(err =>
         this.logger.warn('Failed to persist sent message to store', {
           error: err instanceof Error ? err.message : String(err),
