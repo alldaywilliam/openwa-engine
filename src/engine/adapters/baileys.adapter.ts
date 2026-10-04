@@ -120,6 +120,18 @@ export class BaileysAdapter implements IWhatsAppEngine {
   // Baileys chama getMessage para reenviar. Sem resposta, a mensagem fica
   // para sempre em "Aguardando mensagem" (2026-10-02). O conteudo fica SO
   // na memoria e so por 24 h: o banco continua sem texto (ver 48dc58c).
+  // Quantas vezes cada mensagem ja foi reenviada a pedido do celular (Baileys
+  // CacheStore). Vive na instancia: sobrevive a reconexao, morre no deploy.
+  private readonly retryCounter = (() => {
+    const m = new Map<string, unknown>();
+    return {
+      get: <T>(k: string): T | undefined => m.get(k) as T | undefined,
+      set: <T>(k: string, v: T): void => { m.set(k, v); if (m.size > 5000) m.delete(m.keys().next().value as string); },
+      del: (k: string): void => { m.delete(k); },
+      flushAll: (): void => { m.clear(); },
+    };
+  })();
+
   private readonly sentForRetry = new Map<string, { message: unknown; at: number }>();
   private static readonly RETRY_TTL_MS = 24 * 60 * 60 * 1000;
   private static readonly RETRY_MAX = 5000;
@@ -247,8 +259,19 @@ export class BaileysAdapter implements IWhatsAppEngine {
       }
     }
 
+    // Chaves Signal com cache em memoria na frente dos arquivos (recomendacao do
+    // proprio Baileys). Sem ele, gravacoes concorrentes das chaves corrompiam a
+    // sessao com o celular de quem recebe: a 1a copia chegava indecifravel e o
+    // WhatsApp mostrava "Aguardando mensagem" ate a conversa ser aberta
+    // (2026-10-04). O contador de retry evita reenvio em laco.
     const sock = b.default({
-      auth: state,
+      auth: {
+        creds: state.creds,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        keys: b.makeCacheableSignalKeyStore(state.keys, createBaileysLogger() as any),
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      msgRetryCounterCache: this.retryCounter as any,
       version,
       browser: BAILEYS_BROWSER,
       printQRInTerminal: false,

@@ -56,6 +56,7 @@ jest.mock('@whiskeysockets/baileys', () => ({
     return fakeSock;
   }),
   useMultiFileAuthState: jest.fn().mockResolvedValue({ state: { creds: {}, keys: {} }, saveCreds }),
+  makeCacheableSignalKeyStore: jest.fn((keys: unknown) => keys),
   fetchLatestBaileysVersion: jest.fn().mockResolvedValue({ version: [2, 3000, 0] }),
   getContentType: jest.fn(() => 'conversation'),
   // The adapter now downloads via 'stream' mode, so resolve to an async-iterable of chunks (factory is
