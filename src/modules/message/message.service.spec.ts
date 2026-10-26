@@ -170,6 +170,7 @@ describe('MessageService', () => {
       // The DTO carries the real text all the way to the engine — only our copy is dropped.
       expect(mockEngine.sendTextMessage).toHaveBeenCalledWith('628123456789@c.us', 'posso remarcar?');
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const created = (repository.create as jest.Mock).mock.calls.at(-1)![0] as Record<string, unknown>;
       expect(created.body).toBeUndefined();
       expect(JSON.stringify(created)).not.toContain('remarcar');

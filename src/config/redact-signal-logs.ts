@@ -14,7 +14,11 @@ type ConsoleMethod = (...args: unknown[]) => void;
 function redact(original: ConsoleMethod): ConsoleMethod {
   return (...args: unknown[]) => {
     const [first, ...rest] = args;
-    if (typeof first === 'string' && SIGNAL_MESSAGE.test(first) && rest.some(a => a !== null && typeof a === 'object')) {
+    if (
+      typeof first === 'string' &&
+      SIGNAL_MESSAGE.test(first) &&
+      rest.some(a => a !== null && typeof a === 'object')
+    ) {
       original(first, '[keys redacted]');
       return;
     }
@@ -22,10 +26,8 @@ function redact(original: ConsoleMethod): ConsoleMethod {
   };
 }
 
-/* eslint-disable no-console */
 console.info = redact(console.info.bind(console));
 console.warn = redact(console.warn.bind(console));
 console.log = redact(console.log.bind(console));
-/* eslint-enable no-console */
 
 export {};

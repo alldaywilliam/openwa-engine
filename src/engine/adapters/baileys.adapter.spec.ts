@@ -563,13 +563,17 @@ describe('BaileysAdapter messaging', () => {
   });
 
   it('answers a decryption retry with the message it just sent (no "waiting for this message")', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const makeWASocket = jest.requireMock('@whiskeysockets/baileys').default as jest.Mock;
     const proto = { conversation: 'hello' };
     fakeSock.sendMessage.mockResolvedValue({ key: { id: 'OUT9' }, message: proto, messageTimestamp: 1 });
     const adapter = await readyAdapter();
     await adapter.sendTextMessage('628111@s.whatsapp.net', 'hello');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const cfg = makeWASocket.mock.calls[makeWASocket.mock.calls.length - 1][0];
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     await expect(cfg.getMessage({ id: 'OUT9' })).resolves.toBe(proto);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     await expect(cfg.getMessage({ id: 'NOPE' })).resolves.toBeUndefined();
   });
 

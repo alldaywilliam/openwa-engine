@@ -153,6 +153,7 @@ export class BlockMessageContent1782200000000 implements MigrationInterface {
     // the 9.695 conversations already in the table would simply sit there under a rule that arrived
     // too late for them. Setting `body = NULL` is enough to fire the trigger, which rewrites
     // `metadata` through the same allowlist — one pass, one rule, no second implementation to drift.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const scrubbed = await queryRunner.query(`
       UPDATE "messages"
          SET body = NULL
@@ -161,8 +162,9 @@ export class BlockMessageContent1782200000000 implements MigrationInterface {
     `);
     // TypeORM returns the affected count differently per driver; log whatever it gives us so the
     // deploy log records how much history this removed.
-    // eslint-disable-next-line no-console
+
     console.log(`[migration] BlockMessageContent scrubbed message content from existing rows`, {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       affected: Array.isArray(scrubbed) ? scrubbed[1] : scrubbed,
     });
   }

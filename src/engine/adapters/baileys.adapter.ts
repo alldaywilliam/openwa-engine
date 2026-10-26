@@ -126,9 +126,16 @@ export class BaileysAdapter implements IWhatsAppEngine {
     const m = new Map<string, unknown>();
     return {
       get: <T>(k: string): T | undefined => m.get(k) as T | undefined,
-      set: <T>(k: string, v: T): void => { m.set(k, v); if (m.size > 5000) m.delete(m.keys().next().value as string); },
-      del: (k: string): void => { m.delete(k); },
-      flushAll: (): void => { m.clear(); },
+      set: <T>(k: string, v: T): void => {
+        m.set(k, v);
+        if (m.size > 5000) m.delete(m.keys().next().value as string);
+      },
+      del: (k: string): void => {
+        m.delete(k);
+      },
+      flushAll: (): void => {
+        m.clear();
+      },
     };
   })();
 
@@ -141,6 +148,7 @@ export class BaileysAdapter implements IWhatsAppEngine {
     if (!id || !sent?.message) return;
     this.sentForRetry.set(id, { message: sent.message, at: Date.now() });
     if (this.sentForRetry.size > BaileysAdapter.RETRY_MAX) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const oldest = this.sentForRetry.keys().next().value;
       if (oldest) this.sentForRetry.delete(oldest);
     }
@@ -267,11 +275,11 @@ export class BaileysAdapter implements IWhatsAppEngine {
     const sock = b.default({
       auth: {
         creds: state.creds,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        keys: b.makeCacheableSignalKeyStore(state.keys, createBaileysLogger() as any),
+
+        keys: b.makeCacheableSignalKeyStore(state.keys, createBaileysLogger()),
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      msgRetryCounterCache: this.retryCounter as any,
+
+      msgRetryCounterCache: this.retryCounter,
       version,
       browser: BAILEYS_BROWSER,
       printQRInTerminal: false,
@@ -287,7 +295,7 @@ export class BaileysAdapter implements IWhatsAppEngine {
       // the type through a deep import path that TypeScript does not auto-unify here.
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
       logger: createBaileysLogger() as unknown as ILogger,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/require-await
+      // eslint-disable-next-line @typescript-eslint/require-await, @typescript-eslint/no-unsafe-assignment
       getMessage: (async (key: { id?: string | null }) => this.messageForRetry(key.id)) as any,
     });
     this.sock = sock;

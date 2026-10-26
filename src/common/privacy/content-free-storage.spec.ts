@@ -75,6 +75,7 @@ describe('content-free-storage', () => {
         media: { mimetype: 'image/jpeg', data: 'BLOB', filename: 'foto.jpg' },
         quotedMessage: { id: 'X', body: 'texto' },
       };
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const snapshot = JSON.parse(JSON.stringify(live));
 
       stripMetadataForStorage(live);
