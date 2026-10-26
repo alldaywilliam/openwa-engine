@@ -16,12 +16,12 @@ jobs:
   # ──── Build & Test Gate ───────────────────────────────────────────
   test:
     name: Test Gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -56,7 +56,7 @@ jobs:
   # ──── Create GitHub Release ───────────────────────────────────────
   release:
     name: GitHub Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Gate the public Release on a successfully built+pushed image, so a tag never produces a GitHub
     # Release without a matching container image (the docker job also builds the dashboard, which the
     # test gate above does not). Trades a few minutes of buildx latency for release/image consistency.
@@ -101,7 +101,7 @@ jobs:
   # ──── Docker Image with Version Tag ───────────────────────────────
   docker:
     name: Docker Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [test]
     steps:
       - uses: actions/checkout@v7
