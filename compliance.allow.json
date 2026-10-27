@@ -1,0 +1,22 @@
+[
+  {
+    "rule": "third-party-asset",
+    "path": "dashboard/src/App.css",
+    "reason": "DEBT 2026-10-27: loads fonts.googleapis.com. Self-host it (next/font/local, copy the file) or add a reasoned entry to compliance.allow.json."
+  },
+  {
+    "rule": "third-party-asset",
+    "path": "dashboard/src/index.css",
+    "reason": "DEBT 2026-10-27: loads fonts.googleapis.com. Self-host it (next/font/local, copy the file) or add a reasoned entry to compliance.allow.json."
+  },
+  {
+    "rule": "third-party-asset",
+    "path": "src/main.ts",
+    "reason": "DEBT 2026-10-27: loads fonts.googleapis.com. Self-host it (next/font/local, copy the file) or add a reasoned entry to compliance.allow.json."
+  },
+  {
+    "rule": "third-party-asset",
+    "path": "src/main.ts",
+    "reason": "DEBT 2026-10-27: loads fonts.gstatic.com. Self-host it (next/font/local, copy the file) or add a reasoned entry to compliance.allow.json."
+  }
+]

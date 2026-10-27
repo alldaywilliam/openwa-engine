@@ -1,0 +1,23 @@
+name: Compliance
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compliance:
+    name: Compliance gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      # LGPD, COPPA, CIPA, CAN-SPAM: ver docs/COMPLIANCE.md no repo BarberShopSystem.
+      - name: Compliance gate
+        run: node scripts/compliance-check.mjs .
