@@ -141,7 +141,8 @@
     },
     "moduleNameMapper": {
       "^@whiskeysockets/baileys$": "<rootDir>/../test/__mocks__/@whiskeysockets/baileys.ts",
-      "^@whiskeysockets/baileys/(.*)$": "<rootDir>/../test/__mocks__/@whiskeysockets/baileys.ts"
+      "^@whiskeysockets/baileys/(.*)$": "<rootDir>/../test/__mocks__/@whiskeysockets/baileys.ts",
+      "^puppeteer$": "<rootDir>/../test/__mocks__/puppeteer.ts"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"
@@ -176,7 +177,10 @@
     "tar": "^7.5.19",
     "cacache": "^21.0.1",
     "make-fetch-happen": "^16.0.1",
-    "node-gyp": "^13.0.1"
+    "node-gyp": "^13.0.1",
+    "whatsapp-web.js": {
+      "puppeteer": "25.16.0"
+    }
   },
   "engines": {
     "node": ">=24 <25"
