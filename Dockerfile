@@ -9,7 +9,7 @@
 # minifier) optional dependency fails to install ("Cannot find module lightningcss.linux-arm64-gnu.node").
 # The per-arch runtime deps are installed natively in the target-platform production stage below.
 # NOTE: $BUILDPLATFORM requires BuildKit (CI uses buildx; modern `docker build`/compose default to it).
-FROM --platform=$BUILDPLATFORM docker.io/node:22-slim AS builder
+FROM --platform=$BUILDPLATFORM docker.io/node:24-slim AS builder
 
 WORKDIR /app
 
@@ -46,7 +46,7 @@ COPY . .
 RUN npm run build && npm run dashboard:ci -- --include=dev && npm run dashboard:build
 
 # ===== Stage 2: Production =====
-FROM docker.io/node:22-slim AS production
+FROM docker.io/node:24-slim AS production
 
 # Install Chrome/Chromium and required dependencies
 RUN apt-get update && apt-get install -y \

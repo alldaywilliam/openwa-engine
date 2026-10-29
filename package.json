@@ -65,7 +65,7 @@
     "@nestjs/typeorm": "^11.0.3",
     "@nestjs/websockets": "^11.1.27",
     "@whiskeysockets/baileys": "6.7.23",
-    "adm-zip": "^0.5.18",
+    "adm-zip": "^0.6.1",
     "archiver": "^8.0.0",
     "bullmq": "^5.79.2",
     "class-transformer": "^0.5.1",
@@ -177,5 +177,8 @@
     "cacache": "^21.0.1",
     "make-fetch-happen": "^16.0.1",
     "node-gyp": "^13.0.1"
+  },
+  "engines": {
+    "node": ">=24 <25"
   }
 }
